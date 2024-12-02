@@ -16,6 +16,8 @@
 #include "file.h"
 #include "fcntl.h"
 
+int read_count = 0; //Contador de chamadas as sistema read()
+
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
 static int
@@ -72,6 +74,10 @@ sys_read(void)
   struct file *f;
   int n;
   char *p;
+  
+  //Incrementa o contador de chamadas read()
+  extern int read_count;
+  read_count++; //Incrementa o contador global
 
   if(argfd(0, 0, &f) < 0 || argint(2, &n) < 0 || argptr(1, &p, n) < 0)
     return -1;
@@ -241,6 +247,7 @@ bad:
 static struct inode*
 create(char *path, short type, short major, short minor)
 {
+  uint off;
   struct inode *ip, *dp;
   char name[DIRSIZ];
 
@@ -248,7 +255,7 @@ create(char *path, short type, short major, short minor)
     return 0;
   ilock(dp);
 
-  if((ip = dirlookup(dp, name, 0)) != 0){
+  if((ip = dirlookup(dp, name, &off)) != 0){
     iunlockput(dp);
     ilock(ip);
     if(type == T_FILE && ip->type == T_FILE)
@@ -441,4 +448,11 @@ sys_pipe(void)
   fd[0] = fd0;
   fd[1] = fd1;
   return 0;
+}
+
+int
+sys_getreadcount(void)
+{
+	extern int read_count;    //É a declaração externa utilizada pelo contador
+	return read_count;       //Utilizada para contar e retornar o número de vezes que read() foi chamada
 }
